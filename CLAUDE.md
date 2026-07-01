@@ -4,7 +4,12 @@
 
 ## Текущее состояние
 
-Пока в репозитории только спецификация: [SPEC.md](SPEC.md) — авторитетный дизайн, [user-wish.md](user-wish.md) — исходный запрос. Кода, `package.json` и конфигурации сборки ещё нет. При реализации опирайся на SPEC.md — там задан побайтовый формат шифрования, WebDAV-протокол, схема манифеста и этапы поставки (M0–M5).
+Авторитетный дизайн — [SPEC.md](SPEC.md), исходный запрос — [user-wish.md](user-wish.md). Опирайся на SPEC.md: там задан побайтовый формат шифрования, WebDAV-протокол, схема манифеста и этапы поставки (M0–M5).
+
+**Сделано:**
+- **M0 · `crypto-core`** — готов. Пакет [crypto-core/](crypto-core/): `deriveKeys`, `deriveName`, `encryptBlob`/`decryptBlob`, `encryptManifest`/`decryptManifest`/`readManifestSalt`, `sha256Hex`, `base32NoPadEncode`. Только Web Crypto. 24 теста (round-trip, детерминизм, golden-вектора) + строгий typecheck зелёные. План: [docs/superpowers/plans/2026-07-01-m0-crypto-core.md](docs/superpowers/plans/2026-07-01-m0-crypto-core.md).
+
+**Дальше:** M1 (encryptor CLI) → M2 (плагин: WebDavClient + расшифровка + запись) → M3 (Scheduler/Settings/StatusUI) → M4 (edge-cases + релиз BRAT).
 
 ## Что это
 
@@ -40,9 +45,21 @@
 - Плагин игнорирует `.obsidian/` (исключается на стороне VPS), чтобы конфиг плагина не затирался синком.
 - Пофайловая обработка ошибок: битый/недокачанный файл ловится, считается и повторяется на следующем синке — его state **не** обновляется. Один плохой файл не должен валить весь синк. Неверный passphrase = несовпадение GCM-тега манифеста → прерывание до любой записи.
 
-## Сборка и тесты (ещё нет — ожидаемая форма)
+## Сборка и тесты
 
-Стандартный esbuild-шаблон Obsidian для `/plugin` (выход: `main.js`, `manifest.json`, `styles.css`); esbuild-бандл для `/encryptor` → `encryptor.mjs`. Тестирование по SPEC §10: round-trip crypto-core + детерминизм `deriveName` + **golden-вектора** (фикс. salt/iv/passphrase → фикс. ciphertext) для защиты формата; diff/ошибки/guard-логика `SyncEngine` на моках `WebDavClient`/`VaultWriter`. Когда добавишь это — пропиши скрипты в `package.json` и обнови этот раздел реальными командами (включая запуск одного теста).
+### `crypto-core` (готов)
+Тесты на Vitest, тайпчек на TypeScript. Из папки `crypto-core/`:
+- `npm test` — весь набор (`vitest run`).
+- `npm run test:watch` — watch-режим.
+- `npx vitest run test/blob.test.ts` — один файл; `npx vitest run test/blob.test.ts -t "round-trips"` — один тест по имени.
+- `npm run typecheck` — `tsc --noEmit` (strict).
+
+Тулчейн зафиксирован под рантайм: **TypeScript ~5.6** и `"lib": ["ES2022","DOM"]`, `"types": []` — типы Web Crypto (`CryptoKey`, `crypto.subtle`, `BufferSource`) берутся из DOM-lib (это те же WHATWG-API, что в Node ≥ 20 и iOS WebView); node-типы не подключаются, чтобы случайно не утащить `node:*`/`Buffer` в общий код. Не поднимай TS до 5.7+ без правки типов буферов — там `Uint8Array<ArrayBufferLike>` перестаёт присваиваться в `BufferSource`.
+
+**Golden-вектора** — [crypto-core/test/golden.test.ts](crypto-core/test/golden.test.ts): фикс. passphrase/salt/iv → фикс. ciphertext/имя. Любое изменение формата (§2 SPEC) ломает их намеренно — это защита формата, не «чини» константы, а осознанно бампай версию.
+
+### `/encryptor`, `/plugin` (ещё нет — ожидаемая форма)
+Esbuild-бандл для `/encryptor` → единый `encryptor.mjs` (target Node, ESM, без зависимостей). Стандартный esbuild-шаблон Obsidian для `/plugin` (выход: `main.js`, `manifest.json`, `styles.css`). Тесты `SyncEngine` (diff/ошибки/guard) — на моках `WebDavClient`/`VaultWriter`. Пропиши команды здесь, когда появятся.
 
 ## Установка / релиз
 
