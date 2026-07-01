@@ -54,7 +54,11 @@
 - `npx vitest run test/blob.test.ts` — один файл; `npx vitest run test/blob.test.ts -t "round-trips"` — один тест по имени.
 - `npm run typecheck` — `tsc --noEmit` (strict).
 
-Тулчейн зафиксирован под рантайм: **TypeScript ~5.6** и `"lib": ["ES2022","DOM"]`, `"types": []` — типы Web Crypto (`CryptoKey`, `crypto.subtle`, `BufferSource`) берутся из DOM-lib (это те же WHATWG-API, что в Node ≥ 20 и iOS WebView); node-типы не подключаются, чтобы случайно не утащить `node:*`/`Buffer` в общий код. Не поднимай TS до 5.7+ без правки типов буферов — там `Uint8Array<ArrayBufferLike>` перестаёт присваиваться в `BufferSource`.
+Тулчейн: **TypeScript 6.x** (последняя), `"lib": ["ES2022","DOM"]`, `"types": []` — типы Web Crypto (`CryptoKey`, `crypto.subtle`, `BufferSource`) берутся из DOM-lib (это те же WHATWG-API, что в Node ≥ 20 и iOS WebView); node-типы не подключаются, чтобы случайно не утащить `node:*`/`Buffer` в общий код.
+
+**Тип `Bytes = Uint8Array<ArrayBuffer>`** ([bytes.ts](crypto-core/src/bytes.ts)) — все байты, идущие в `crypto.subtle`/`TextDecoder`, объявляются как `Bytes`, а не голый `Uint8Array`. В TS 5.7+ голый `Uint8Array` = `Uint8Array<ArrayBufferLike>` (включает `SharedArrayBuffer`) и **не** присваивается в `BufferSource`; `Bytes` фиксирует бэкинг `ArrayBuffer`. Не заводи в сигнатурах голый `Uint8Array` для крипто-данных — только `Bytes` (значения из `crypto.getRandomValues`, `new Uint8Array(len|arrayBuffer)`, `requestUrl().arrayBuffer` уже `ArrayBuffer`-backed; Node `Buffer` из `readFile` оберни в `new Uint8Array(buf)`).
+
+**IDE и CLI должны совпадать по TS.** [.vscode/settings.json](.vscode/settings.json) указывает `typescript.tsdk` на воркспейс-версию — VS Code не должен использовать свою встроенную. Иначе `npm run typecheck` зелёный, а в IDE красные ошибки буферов (так и было). Проверяй typecheck именно локальным `tsc`.
 
 **Golden-вектора** — [crypto-core/test/golden.test.ts](crypto-core/test/golden.test.ts): фикс. passphrase/salt/iv → фикс. ciphertext/имя. Любое изменение формата (§2 SPEC) ломает их намеренно — это защита формата, не «чини» константы, а осознанно бампай версию.
 

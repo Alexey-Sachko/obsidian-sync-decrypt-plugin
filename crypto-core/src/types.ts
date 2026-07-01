@@ -1,10 +1,12 @@
+import type { Bytes } from "./bytes.js";
+
 export interface DerivedKeys {
   /** AES-GCM 256-bit key for file/manifest content. */
   contentKey: CryptoKey;
   /** HMAC-SHA-256 key for deterministic remote names. */
   nameKey: CryptoKey;
   /** The 16-byte salt these keys were derived from. */
-  salt: Uint8Array;
+  salt: Bytes;
 }
 
 export interface ManifestFile {

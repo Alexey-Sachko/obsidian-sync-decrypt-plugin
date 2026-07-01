@@ -1,10 +1,10 @@
-import { utf8Encode } from "./bytes.js";
+import { utf8Encode, type Bytes } from "./bytes.js";
 import type { DerivedKeys } from "./types.js";
 
 const PBKDF2_ITERATIONS = 200_000;
 const EMPTY_SALT = new Uint8Array(0);
 
-export async function deriveKeys(passphrase: string, salt: Uint8Array): Promise<DerivedKeys> {
+export async function deriveKeys(passphrase: string, salt: Bytes): Promise<DerivedKeys> {
   const passKey = await crypto.subtle.importKey(
     "raw",
     utf8Encode(passphrase),

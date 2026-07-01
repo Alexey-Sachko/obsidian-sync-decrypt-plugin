@@ -5,4 +5,5 @@ export { encryptManifest, decryptManifest, readManifestSalt } from "./manifest.j
 export { sha256Hex } from "./sha256.js";
 export { base32NoPadEncode } from "./base32.js";
 export { utf8Encode, utf8Decode, concatBytes, toHex, equalBytes } from "./bytes.js";
+export type { Bytes } from "./bytes.js";
 export type { DerivedKeys, Manifest, ManifestFile } from "./types.js";

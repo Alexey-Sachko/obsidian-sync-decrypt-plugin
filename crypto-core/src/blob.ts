@@ -1,4 +1,4 @@
-import { concatBytes, equalBytes, utf8Encode } from "./bytes.js";
+import { concatBytes, equalBytes, utf8Encode, type Bytes } from "./bytes.js";
 
 const MAGIC = utf8Encode("OSD1"); // 4 bytes
 const VERSION = 0x01;
@@ -7,16 +7,16 @@ const HEADER_LEN = 4 + 1 + IV_LEN;
 
 export async function encryptBlob(
   contentKey: CryptoKey,
-  plaintext: Uint8Array,
-  iv: Uint8Array = crypto.getRandomValues(new Uint8Array(IV_LEN)),
-): Promise<Uint8Array> {
+  plaintext: Bytes,
+  iv: Bytes = crypto.getRandomValues(new Uint8Array(IV_LEN)),
+): Promise<Bytes> {
   const ct = new Uint8Array(
     await crypto.subtle.encrypt({ name: "AES-GCM", iv }, contentKey, plaintext),
   );
   return concatBytes(MAGIC, new Uint8Array([VERSION]), iv, ct);
 }
 
-export async function decryptBlob(contentKey: CryptoKey, blob: Uint8Array): Promise<Uint8Array> {
+export async function decryptBlob(contentKey: CryptoKey, blob: Bytes): Promise<Bytes> {
   if (blob.length < HEADER_LEN) throw new Error("Blob too short");
   if (!equalBytes(blob.slice(0, 4), MAGIC)) throw new Error("Bad blob magic");
   if (blob[4] !== VERSION) throw new Error(`Unsupported blob version ${blob[4]}`);
