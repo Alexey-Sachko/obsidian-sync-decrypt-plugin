@@ -6,10 +6,13 @@
 
 Авторитетный дизайн — [SPEC.md](SPEC.md), исходный запрос — [user-wish.md](user-wish.md). Опирайся на SPEC.md: там задан побайтовый формат шифрования, WebDAV-протокол, схема манифеста и этапы поставки (M0–M5).
 
+Репозиторий — **npm-workspaces монорепо** (корневой [package.json](package.json), workspaces `crypto-core`, `encryptor`). Общий тулчейн (typescript, vitest, esbuild) поднят в корень; `encryptor` тянет `crypto-core` как workspace-пакет (`import … from "crypto-core"`) — тот же формат байт-в-байт, что пойдёт в плагин.
+
 **Сделано:**
 - **M0 · `crypto-core`** — готов. Пакет [crypto-core/](crypto-core/): `deriveKeys`, `deriveName`, `encryptBlob`/`decryptBlob`, `encryptManifest`/`decryptManifest`/`readManifestSalt`, `sha256Hex`, `base32NoPadEncode`. Только Web Crypto. 24 теста (round-trip, детерминизм, golden-вектора) + строгий typecheck зелёные. План: [docs/superpowers/plans/2026-07-01-m0-crypto-core.md](docs/superpowers/plans/2026-07-01-m0-crypto-core.md).
+- **M1 · `encryptor`** — готов. Пакет [encryptor/](encryptor/): слоистый CLI на портах `SourceFs`/`WebDav` ([sync.ts](encryptor/src/sync.ts) — ядро `encryptSync`: diff по sha, upload/delete, пересборка `manifest.enc`), Node-адаптеры [walk.ts](encryptor/src/walk.ts)/[webdav.ts](encryptor/src/webdav.ts) (встроенный `fetch`, Basic auth), state с base64-salt ([state.ts](encryptor/src/state.ts)), config file+env ([config.ts](encryptor/src/config.ts)), `--full`/`--config`/`--help` ([cli.ts](encryptor/src/cli.ts)). esbuild → единый `encryptor.mjs` (10 КБ, crypto-core инлайнится, ноль внешних зависимостей). 20 тестов + typecheck зелёные; sync-тест расшифровывает манифест через crypto-core (кросс-проверка формата). План: [docs/superpowers/plans/2026-07-02-m1-encryptor-cli.md](docs/superpowers/plans/2026-07-02-m1-encryptor-cli.md).
 
-**Дальше:** M1 (encryptor CLI) → M2 (плагин: WebDavClient + расшифровка + запись) → M3 (Scheduler/Settings/StatusUI) → M4 (edge-cases + релиз BRAT).
+**Дальше:** M2 (плагин: WebDavClient + расшифровка + запись) → M3 (Scheduler/Settings/StatusUI) → M4 (edge-cases + релиз BRAT).
 
 ## Что это
 
@@ -47,12 +50,10 @@
 
 ## Сборка и тесты
 
+Из корня репо (workspaces): `npm test` и `npm run typecheck` гоняют **все** пакеты. По одному пакету — `npm test -w crypto-core`, `npm run typecheck -w encryptor`. Один файл/тест — `npm test -w encryptor -- sync` (подстрока), либо из папки пакета `npx vitest run test/sync.test.ts -t "skips unchanged"`. После `npm install` — только из корня.
+
 ### `crypto-core` (готов)
-Тесты на Vitest, тайпчек на TypeScript. Из папки `crypto-core/`:
-- `npm test` — весь набор (`vitest run`).
-- `npm run test:watch` — watch-режим.
-- `npx vitest run test/blob.test.ts` — один файл; `npx vitest run test/blob.test.ts -t "round-trips"` — один тест по имени.
-- `npm run typecheck` — `tsc --noEmit` (strict).
+Тесты на Vitest, тайпчек на TypeScript. `npm test -w crypto-core`, `npm run typecheck -w crypto-core`, `npm run test:watch -w crypto-core`.
 
 Тулчейн: **TypeScript 6.x** (последняя), `"lib": ["ES2022","DOM"]`, `"types": []` — типы Web Crypto (`CryptoKey`, `crypto.subtle`, `BufferSource`) берутся из DOM-lib (это те же WHATWG-API, что в Node ≥ 20 и iOS WebView); node-типы не подключаются, чтобы случайно не утащить `node:*`/`Buffer` в общий код.
 
@@ -62,8 +63,11 @@
 
 **Golden-вектора** — [crypto-core/test/golden.test.ts](crypto-core/test/golden.test.ts): фикс. passphrase/salt/iv → фикс. ciphertext/имя. Любое изменение формата (§2 SPEC) ломает их намеренно — это защита формата, не «чини» константы, а осознанно бампай версию.
 
-### `/encryptor`, `/plugin` (ещё нет — ожидаемая форма)
-Esbuild-бандл для `/encryptor` → единый `encryptor.mjs` (target Node, ESM, без зависимостей). Стандартный esbuild-шаблон Obsidian для `/plugin` (выход: `main.js`, `manifest.json`, `styles.css`). Тесты `SyncEngine` (diff/ошибки/guard) — на моках `WebDavClient`/`VaultWriter`. Пропиши команды здесь, когда появятся.
+### `encryptor` (готов)
+`npm test -w encryptor`, `npm run typecheck -w encryptor`. Сборка: **`npm run build -w encryptor`** → `encryptor/encryptor.mjs` (esbuild, target node20, ESM, crypto-core инлайнится, ноль внешних зависимостей; артефакт в `.gitignore`). Деплой на VPS: скопировать `encryptor.mjs` + `config.json`, запуск `node encryptor.mjs [--config <path>] [--full]`. Ядро `encryptSync` тестируется на in-memory фейках портов `SourceFs`/`WebDav`; Node-адаптеры (`NodeSourceFs`, `FetchWebDav`) — свои юнит-тесты + smoke-тест собранного бандла (`node encryptor.mjs --help`).
+
+### `/plugin` (ещё нет — ожидаемая форма)
+Стандартный esbuild-шаблон Obsidian для `/plugin` (выход: `main.js`, `manifest.json`, `styles.css`). Тесты `SyncEngine` (diff/ошибки/guard) — на моках `WebDavClient`/`VaultWriter`. Пропиши команды здесь, когда появятся.
 
 ## Установка / релиз
 
