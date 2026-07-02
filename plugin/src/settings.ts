@@ -1,6 +1,9 @@
 import { PluginSettingTab, Setting } from "obsidian";
 import type WebDavDecryptSyncPlugin from "./main.js";
 import type { PluginSettings } from "./types.js";
+import { INTERVAL_PRESETS } from "./interval.js";
+import { validateSettings, testConnection } from "./validate.js";
+import { ObsidianWebDavClient } from "./webdav.js";
 
 export const DEFAULT_SETTINGS: PluginSettings = {
   webdavUrl: "",
@@ -10,6 +13,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   remoteBase: "",
   targetFolder: "",
   deleteMissing: true,
+  syncInterval: 0,
+  syncOnOpen: true,
 };
 
 const STRING_KEYS = [
@@ -30,14 +35,15 @@ export class SyncSettingsTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
+    const s = this.plugin.settings;
 
     const textField = (name: string, desc: string, key: StringKey, password = false): void => {
       new Setting(containerEl)
         .setName(name)
         .setDesc(desc)
         .addText((t) => {
-          t.setValue(this.plugin.settings[key]).onChange(async (v) => {
-            this.plugin.settings[key] = v;
+          t.setValue(s[key]).onChange(async (v) => {
+            s[key] = v;
             await this.plugin.saveSettings();
           });
           if (password) t.inputEl.type = "password";
@@ -55,15 +61,62 @@ export class SyncSettingsTab extends PluginSettingTab {
       .setName("Delete missing files")
       .setDesc("Remove local files no longer present in the manifest")
       .addToggle((t) =>
-        t.setValue(this.plugin.settings.deleteMissing).onChange(async (v) => {
-          this.plugin.settings.deleteMissing = v;
+        t.setValue(s.deleteMissing).onChange(async (v) => {
+          s.deleteMissing = v;
           await this.plugin.saveSettings();
         }),
       );
 
     new Setting(containerEl)
+      .setName("Sync interval")
+      .setDesc("Runs only while Obsidian is open — iOS has no background sync")
+      .addDropdown((d) => {
+        for (const p of INTERVAL_PRESETS) d.addOption(String(p.minutes), p.label);
+        d.setValue(String(s.syncInterval)).onChange(async (v) => {
+          s.syncInterval = Number(v);
+          await this.plugin.saveSettings();
+          this.plugin.applySchedule();
+        });
+      });
+
+    new Setting(containerEl)
+      .setName("Sync on open")
+      .setDesc("Sync once when Obsidian finishes loading")
+      .addToggle((t) =>
+        t.setValue(s.syncOnOpen).onChange(async (v) => {
+          s.syncOnOpen = v;
+          await this.plugin.saveSettings();
+        }),
+      );
+
+    const status = containerEl.createEl("p", { text: "" });
+    status.style.opacity = "0.8";
+
+    new Setting(containerEl)
+      .setName("Test connection")
+      .setDesc("Check URL, credentials, and that manifest.enc is reachable")
+      .addButton((b) =>
+        b.setButtonText("Test").onClick(async () => {
+          const errs = validateSettings(s);
+          if (errs.length) {
+            status.setText("⚠ " + errs.join("; "));
+            return;
+          }
+          status.setText("Testing…");
+          const dav = new ObsidianWebDavClient({
+            baseUrl: s.webdavUrl,
+            remoteBase: s.remoteBase,
+            user: s.webdavUser,
+            pass: s.webdavPass,
+            request: this.plugin.makeRequest(),
+          });
+          const res = await testConnection(dav);
+          status.setText(res.ok ? "✓ Connection OK" : "✗ " + res.message);
+        }),
+      );
+
+    new Setting(containerEl)
       .setName("Sync now")
-      .setDesc("iOS has no background sync — sync runs only while the app is open")
       .addButton((b) =>
         b
           .setButtonText("Sync now")
