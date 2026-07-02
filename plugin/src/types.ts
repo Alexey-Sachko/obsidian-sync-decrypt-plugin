@@ -18,9 +18,17 @@ export interface PersistedState {
   manifestEtag?: string;
 }
 
+export interface ConditionalGet {
+  status: number; // 200 or 304
+  body?: Bytes;
+  etag?: string;
+}
+
 export interface WebDavClient {
   /** GET remoteBase/name → raw bytes. Throws on network/HTTP failure. */
   get(name: string): Promise<Bytes>;
+  /** Conditional GET; 304 → { status: 304 } (no body). */
+  getConditional(name: string, etag?: string): Promise<ConditionalGet>;
 }
 
 export interface VaultWriter {
@@ -39,6 +47,7 @@ export interface SyncStats {
   downloaded: number;
   failed: number;
   deleted: number;
+  notModified?: boolean;
 }
 
 /** Structural subset of Obsidian's requestUrl (type-only; no runtime import). */
@@ -51,6 +60,7 @@ export interface RequestArg {
 export interface RequestResponse {
   status: number;
   arrayBuffer: ArrayBuffer;
+  headers?: Record<string, string>;
 }
 export type RequestFn = (arg: RequestArg) => Promise<RequestResponse>;
 
