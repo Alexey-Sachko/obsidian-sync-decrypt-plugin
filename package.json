@@ -3,14 +3,16 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "workspaces": ["crypto-core", "encryptor"],
+  "workspaces": ["crypto-core", "encryptor", "plugin"],
   "scripts": {
     "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",
+    "builtin-modules": "^3.3.0",
     "esbuild": "^0.24.0",
+    "obsidian": "^1.6.0",
     "typescript": "^6.0.3",
     "vitest": "^2.1.9"
   }
