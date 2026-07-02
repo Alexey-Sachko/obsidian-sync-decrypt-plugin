@@ -11,16 +11,14 @@ const ENV_MAP: Record<string, keyof EncryptorConfig> = {
   PASSPHRASE: "passphrase",
   SOURCE_DIR: "sourceDir",
   STATE_PATH: "statePath",
+  BACKEND: "backend",
+  YANDEX_TOKEN: "yandexToken",
+  REMOTE_BASE: "remoteBase",
 };
 
-const REQUIRED: (keyof EncryptorConfig)[] = [
-  "webdavUrl",
-  "webdavUser",
-  "webdavPass",
-  "passphrase",
-  "sourceDir",
-  "statePath",
-];
+const ALWAYS_REQUIRED: (keyof EncryptorConfig)[] = ["passphrase", "sourceDir", "statePath"];
+const WEBDAV_REQUIRED: (keyof EncryptorConfig)[] = ["webdavUrl", "webdavUser", "webdavPass"];
+const YANDEX_REQUIRED: (keyof EncryptorConfig)[] = ["yandexToken"];
 
 export function loadConfig(opts: {
   fileJson?: PartialConfig;
@@ -32,15 +30,23 @@ export function loadConfig(opts: {
     if (v !== undefined && v !== "") merged[cfgKey] = v;
   }
 
-  const missing = REQUIRED.filter((k) => typeof merged[k] !== "string" || merged[k] === "");
+  const backend = merged.backend === "yandex" ? "yandex" : "webdav";
+  const required = [
+    ...ALWAYS_REQUIRED,
+    ...(backend === "yandex" ? YANDEX_REQUIRED : WEBDAV_REQUIRED),
+  ];
+  const missing = required.filter((k) => typeof merged[k] !== "string" || merged[k] === "");
   if (missing.length) throw new Error(`Missing required config: ${missing.join(", ")}`);
 
   const ignore = Array.isArray(merged.ignore) ? (merged.ignore as string[]) : DEFAULT_IGNORE;
 
   return {
-    webdavUrl: merged.webdavUrl as string,
-    webdavUser: merged.webdavUser as string,
-    webdavPass: merged.webdavPass as string,
+    backend,
+    webdavUrl: (merged.webdavUrl as string) ?? "",
+    webdavUser: (merged.webdavUser as string) ?? "",
+    webdavPass: (merged.webdavPass as string) ?? "",
+    yandexToken: (merged.yandexToken as string) ?? "",
+    remoteBase: (merged.remoteBase as string) ?? "",
     passphrase: merged.passphrase as string,
     sourceDir: merged.sourceDir as string,
     statePath: merged.statePath as string,

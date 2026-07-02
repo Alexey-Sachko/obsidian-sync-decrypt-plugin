@@ -42,6 +42,9 @@ export interface EncryptorConfig {
   sourceDir: string;
   statePath: string;
   ignore: string[];
+  backend: "webdav" | "yandex";
+  yandexToken: string;
+  remoteBase: string;
 }
 
 export type { Bytes, Manifest };

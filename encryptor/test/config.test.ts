@@ -27,3 +27,37 @@ describe("loadConfig", () => {
     expect(() => loadConfig({ fileJson: {}, env: {} })).toThrow(/passphrase/);
   });
 });
+
+describe("loadConfig backends", () => {
+  it("defaults backend to webdav", () => {
+    expect(loadConfig({ fileJson: base, env: {} }).backend).toBe("webdav");
+  });
+  it("yandex backend requires a token, not webdav creds", () => {
+    const yandexOk = {
+      backend: "yandex",
+      yandexToken: "tok",
+      passphrase: "pw",
+      sourceDir: "/v",
+      statePath: "/s.json",
+    };
+    const cfg = loadConfig({ fileJson: yandexOk, env: {} });
+    expect(cfg.backend).toBe("yandex");
+    expect(cfg.yandexToken).toBe("tok");
+  });
+  it("yandex backend without token throws", () => {
+    expect(() =>
+      loadConfig({
+        fileJson: { backend: "yandex", passphrase: "pw", sourceDir: "/v", statePath: "/s.json" },
+        env: {},
+      }),
+    ).toThrow(/yandexToken/);
+  });
+  it("env YANDEX_TOKEN and REMOTE_BASE apply", () => {
+    const cfg = loadConfig({
+      fileJson: { backend: "yandex", passphrase: "pw", sourceDir: "/v", statePath: "/s.json" },
+      env: { YANDEX_TOKEN: "envtok", REMOTE_BASE: "second-brain" },
+    });
+    expect(cfg.yandexToken).toBe("envtok");
+    expect(cfg.remoteBase).toBe("second-brain");
+  });
+});
