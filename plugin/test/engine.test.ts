@@ -91,6 +91,8 @@ const settings = (over: Partial<PluginSettings> = {}): PluginSettings => ({
   remoteBase: "",
   targetFolder: "",
   deleteMissing: true,
+  syncInterval: 0,
+  syncOnOpen: true,
   ...over,
 });
 

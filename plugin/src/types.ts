@@ -8,6 +8,8 @@ export interface PluginSettings {
   remoteBase: string;
   targetFolder: string;
   deleteMissing: boolean;
+  syncInterval: number; // minutes; 0 = off
+  syncOnOpen: boolean;
 }
 
 export interface PersistedState {
