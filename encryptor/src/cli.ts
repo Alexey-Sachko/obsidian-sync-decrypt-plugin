@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { loadConfig } from "./config.js";
 import { newState, parseState, serializeState } from "./state.js";
 import { NodeSourceFs } from "./walk.js";
-import { FetchWebDav } from "./webdav.js";
+import { createBackend } from "./backend.js";
 import { encryptSync } from "./sync.js";
 import type { SyncState } from "./types.js";
 
@@ -65,11 +65,7 @@ export async function main(argv: string[]): Promise<void> {
 
   const state = await loadState(config.statePath);
   const source = new NodeSourceFs(config.sourceDir, config.ignore);
-  const webdav = new FetchWebDav({
-    baseUrl: config.webdavUrl,
-    user: config.webdavUser,
-    pass: config.webdavPass,
-  });
+  const webdav = createBackend(config);
 
   const { state: nextState, stats } = await encryptSync({
     source,
