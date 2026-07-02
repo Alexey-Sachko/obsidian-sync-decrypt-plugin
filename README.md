@@ -26,6 +26,19 @@ Local end-to-end against a real WebDAV: `docker compose up -d` (see [docker-comp
 > Full operator reference (flags, config keys, env vars, paths, ignore rules, output/exit-code
 > contract) — for humans or an automated agent: **[encryptor/README.md](encryptor/README.md)**.
 
+### One-command install (recommended)
+
+Pulls the prebuilt bundle + docs + example config from the latest GitHub release (needs only `curl` and Node ≥ 20):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Alexey-Sachko/obsidian-sync-decrypt-plugin/main/scripts/install-encryptor.sh | bash
+```
+
+Installs to `~/obsidian-encryptor` (override with `INSTALL_DIR=/opt/encryptor`). Re-run to update; `config.json` is preserved.
+Requires a release that includes the encryptor assets (created by [the release workflow](.github/workflows/release.yml) on `git tag`).
+
+### Manual build
+
 1. `npm run build -w encryptor`, copy `encryptor/encryptor.mjs` to the server.
 2. Create `config.json`:
    ```json

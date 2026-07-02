@@ -12,6 +12,24 @@ It encrypts a local Obsidian vault and syncs the encrypted blobs + `manifest.enc
   Build it from the repo with `npm run build -w encryptor` → `encryptor/encryptor.mjs`, then copy that
   one file wherever you run it.
 
+## 1a. One-command install (VPS)
+
+Downloads the prebuilt `encryptor.mjs` + this README + `config.example.json` from the latest GitHub
+release into `~/obsidian-encryptor` (needs only `curl` and Node.js ≥ 20 — no build, no git clone):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Alexey-Sachko/obsidian-sync-decrypt-plugin/main/scripts/install-encryptor.sh | bash
+```
+
+Custom directory:
+```bash
+curl -fsSL https://raw.githubusercontent.com/Alexey-Sachko/obsidian-sync-decrypt-plugin/main/scripts/install-encryptor.sh | INSTALL_DIR=/opt/encryptor bash
+```
+
+On first run it seeds `config.json` from the template (edit it). Re-run any time to **update**
+`encryptor.mjs` — your `config.json` is preserved. Requires a GitHub release that includes the encryptor
+assets (cut a tag; see the repo's release workflow).
+
 ## 2. Invocation
 
 ```

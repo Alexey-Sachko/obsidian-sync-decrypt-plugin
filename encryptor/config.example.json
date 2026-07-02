@@ -1,0 +1,10 @@
+{
+  "backend": "webdav",
+  "webdavUrl": "https://dav.example.com/webdav/second-brain",
+  "webdavUser": "REPLACE_ME",
+  "webdavPass": "REPLACE_ME",
+  "passphrase": "REPLACE_ME_same_passphrase_as_the_plugin",
+  "sourceDir": "/absolute/path/to/your/vault",
+  "statePath": "/absolute/path/to/state.json",
+  "ignore": [".obsidian", ".trash", ".git"]
+}
