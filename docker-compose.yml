@@ -1,0 +1,22 @@
+# Local WebDAV server for testing the encryptor end-to-end.
+#
+#   docker compose up -d      # start on http://localhost:8080  (user: testuser / testpass)
+#   docker compose down -v    # stop and wipe the data volume
+#
+# The encryptor points at it via a config.json like:
+#   { "webdavUrl": "http://localhost:8080", "webdavUser": "testuser",
+#     "webdavPass": "testpass", "passphrase": "...", "sourceDir": "...", "statePath": "..." }
+services:
+  webdav:
+    image: bytemark/webdav
+    ports:
+      - "8080:80"
+    environment:
+      AUTH_TYPE: Basic
+      USERNAME: testuser
+      PASSWORD: testpass
+    volumes:
+      - webdav-data:/var/lib/dav
+
+volumes:
+  webdav-data:

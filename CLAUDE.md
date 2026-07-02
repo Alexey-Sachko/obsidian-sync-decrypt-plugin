@@ -66,6 +66,8 @@
 ### `encryptor` (готов)
 `npm test -w encryptor`, `npm run typecheck -w encryptor`. Сборка: **`npm run build -w encryptor`** → `encryptor/encryptor.mjs` (esbuild, target node20, ESM, crypto-core инлайнится, ноль внешних зависимостей; артефакт в `.gitignore`). Деплой на VPS: скопировать `encryptor.mjs` + `config.json`, запуск `node encryptor.mjs [--config <path>] [--full]`. Ядро `encryptSync` тестируется на in-memory фейках портов `SourceFs`/`WebDav`; Node-адаптеры (`NodeSourceFs`, `FetchWebDav`) — свои юнит-тесты + smoke-тест собранного бандла (`node encryptor.mjs --help`).
 
+**Локальный e2e против настоящего WebDAV:** [docker-compose.yml](docker-compose.yml) поднимает `bytemark/webdav` на `http://localhost:8080` (testuser/testpass). `docker compose up -d` → собрать бандл → прогнать `node encryptor/encryptor.mjs --config <cfg>` на тестовом vault → скачать блобы/манифест по HTTP и расшифровать через crypto-core. Проверено сквозняком: initial (3 upload), инкремент (skip), правка+удаление (re-upload+DELETE, блоб отдаёт 404), `--full`, неверный passphrase (GCM-тег не сходится). `docker compose down -v` для очистки.
+
 ### `/plugin` (ещё нет — ожидаемая форма)
 Стандартный esbuild-шаблон Obsidian для `/plugin` (выход: `main.js`, `manifest.json`, `styles.css`). Тесты `SyncEngine` (diff/ошибки/guard) — на моках `WebDavClient`/`VaultWriter`. Пропиши команды здесь, когда появятся.
 
