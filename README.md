@@ -73,6 +73,9 @@ treated read-only; local edits are overwritten on the next sync.
 Yandex.Disk blocks WebDAV writes on the free tier (HTTP 402), but its **REST API works**.
 Both the encryptor and the plugin support `backend: "yandex"`.
 
+> 📖 Пошаговая инструкция на русском (создание приложения в Яндексе, получение токена, настройка):
+> **[docs/yandex-disk-setup.md](docs/yandex-disk-setup.md)**.
+
 1. Register an OAuth app at `https://oauth.yandex.ru/` — choose **"For API access"**, add scopes
    `cloud_api:disk.read` + `cloud_api:disk.write`, redirect URI `https://oauth.yandex.ru/verification_code`.
 2. Get a token in the browser (implicit flow):
