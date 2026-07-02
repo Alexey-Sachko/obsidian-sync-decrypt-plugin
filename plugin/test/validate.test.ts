@@ -28,12 +28,18 @@ describe("validateSettings", () => {
 
 describe("testConnection", () => {
   it("ok when manifest fetch resolves", async () => {
-    const dav: WebDavClient = { get: async () => new Uint8Array([1]) as Bytes };
+    const dav: WebDavClient = {
+      get: async () => new Uint8Array([1]) as Bytes,
+      getConditional: async () => ({ status: 200, body: new Uint8Array([1]) as Bytes }),
+    };
     expect(await testConnection(dav)).toEqual({ ok: true });
   });
   it("returns the error message on failure", async () => {
     const dav: WebDavClient = {
       get: async () => {
+        throw new Error("GET manifest.enc failed: 401");
+      },
+      getConditional: async () => {
         throw new Error("GET manifest.enc failed: 401");
       },
     };
