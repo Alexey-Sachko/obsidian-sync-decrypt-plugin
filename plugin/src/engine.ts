@@ -38,13 +38,23 @@ export class SyncEngine {
     const { webdav, vault, state, settings } = this.deps;
     const stats: SyncStats = { downloaded: 0, failed: 0, deleted: 0 };
 
-    // Fetch + decrypt manifest first; wrong passphrase throws here, before any write.
-    const manifestBytes = await webdav.get(MANIFEST_NAME);
+    const current = state.get();
+
+    // Conditional manifest fetch: 304 means nothing changed since last sync.
+    const manifestRes = await webdav.getConditional(MANIFEST_NAME, current.manifestEtag);
+    if (manifestRes.status === 304) {
+      current.lastSync = Date.now();
+      state.set(current);
+      await state.save();
+      return { downloaded: 0, failed: 0, deleted: 0, notModified: true };
+    }
+
+    // Decrypt manifest; wrong passphrase throws here, before any write.
+    const manifestBytes = manifestRes.body!;
     const salt = readManifestSalt(manifestBytes);
     const { contentKey } = await deriveKeys(settings.passphrase, salt);
     const manifest = await decryptManifest(manifestBytes, contentKey);
 
-    const current = state.get();
     const { toDownload, toDelete } = computeDiff(manifest, current, settings.deleteMissing);
 
     const total = toDownload.length;
@@ -75,6 +85,7 @@ export class SyncEngine {
     }
 
     current.lastSync = Date.now();
+    current.manifestEtag = manifestRes.etag;
     state.set(current);
     await state.save();
 

@@ -45,9 +45,11 @@ async function buildRemote(files: Record<string, string>) {
 
 class FakeDav implements WebDavClient {
   gets: string[] = [];
+  conditionalCalls: Array<string | undefined> = [];
   constructor(
     public blobs: Map<string, Bytes>,
     public failNames = new Set<string>(),
+    public etag = '"v1"',
   ) {}
   async get(name: string): Promise<Bytes> {
     this.gets.push(name);
@@ -55,6 +57,13 @@ class FakeDav implements WebDavClient {
     const b = this.blobs.get(name);
     if (!b) throw new Error(`404 ${name}`);
     return b;
+  }
+  async getConditional(name: string, etag?: string) {
+    this.conditionalCalls.push(etag);
+    if (etag && etag === this.etag) return { status: 304 as const };
+    const body = this.blobs.get(name);
+    if (!body) throw new Error(`404 ${name}`);
+    return { status: 200, body, etag: this.etag };
   }
 }
 
@@ -139,7 +148,7 @@ describe("SyncEngine.run", () => {
 
     const vault2 = new FakeVault();
     const stats2 = await new SyncEngine({
-      webdav: new FakeDav(remote),
+      webdav: new FakeDav(remote, new Set(), '"v2"'), // manifest changed, but file sha unchanged
       vault: vault2,
       state,
       settings: settings(),
@@ -175,7 +184,7 @@ describe("SyncEngine.run", () => {
     const remote2 = await buildRemote({ "a.md": "alpha" });
     const vault2 = new FakeVault();
     const stats = await new SyncEngine({
-      webdav: new FakeDav(remote2),
+      webdav: new FakeDav(remote2, new Set(), '"v2"'), // manifest changed (gone.md removed)
       vault: vault2,
       state,
       settings: settings(),
@@ -183,6 +192,57 @@ describe("SyncEngine.run", () => {
     expect(stats.deleted).toBe(1);
     expect(vault2.removed).toEqual(["gone.md"]);
     expect(state.get().fileState["gone.md"]).toBeUndefined();
+  });
+
+  it("stores the manifest etag and short-circuits on 304", async () => {
+    const remote = await buildRemote({ "a.md": "alpha" });
+    const dav = new FakeDav(remote);
+    const state = new FakeState(emptyState());
+    const r1 = await new SyncEngine({
+      webdav: dav,
+      vault: new FakeVault(),
+      state,
+      settings: settings(),
+    }).run();
+    expect(r1.notModified).toBeFalsy();
+    expect(state.get().manifestEtag).toBe('"v1"');
+
+    const dav2 = new FakeDav(remote); // same etag "v1"
+    const vault2 = new FakeVault();
+    const r2 = await new SyncEngine({
+      webdav: dav2,
+      vault: vault2,
+      state,
+      settings: settings(),
+    }).run();
+    expect(r2.notModified).toBe(true);
+    expect(r2).toMatchObject({ downloaded: 0, failed: 0, deleted: 0 });
+    expect(dav2.conditionalCalls).toEqual(['"v1"']);
+    expect(vault2.written.size).toBe(0);
+  });
+
+  it("re-syncs when the etag changed", async () => {
+    const remote1 = await buildRemote({ "a.md": "alpha" });
+    const state = new FakeState(emptyState());
+    await new SyncEngine({
+      webdav: new FakeDav(remote1, new Set(), '"v1"'),
+      vault: new FakeVault(),
+      state,
+      settings: settings(),
+    }).run();
+
+    const remote2 = await buildRemote({ "a.md": "alpha EDITED" });
+    const dav2 = new FakeDav(remote2, new Set(), '"v2"');
+    const vault2 = new FakeVault();
+    const r2 = await new SyncEngine({
+      webdav: dav2,
+      vault: vault2,
+      state,
+      settings: settings(),
+    }).run();
+    expect(r2.notModified).toBeFalsy();
+    expect(vault2.written.get("a.md")).toBe("alpha EDITED");
+    expect(state.get().manifestEtag).toBe('"v2"');
   });
 
   it("reports progress after each download attempt", async () => {
