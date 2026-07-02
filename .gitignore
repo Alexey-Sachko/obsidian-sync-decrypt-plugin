@@ -5,3 +5,6 @@ dist/
 
 # encryptor build artifact (single-file bundle, produced by `npm run build -w encryptor`)
 encryptor/encryptor.mjs
+
+# plugin build artifact (produced by `npm run build -w plugin`)
+plugin/main.js
