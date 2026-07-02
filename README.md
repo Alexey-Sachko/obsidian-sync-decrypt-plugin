@@ -52,6 +52,26 @@ Keep `state.json` — it holds the one-time salt; losing it changes every remote
 foreground (on open, on the chosen interval, or manually). The local vault is
 treated read-only; local edits are overwritten on the next sync.
 
+## Yandex.Disk backend (alternative to WebDAV)
+
+Yandex.Disk blocks WebDAV writes on the free tier (HTTP 402), but its **REST API works**.
+Both the encryptor and the plugin support `backend: "yandex"`.
+
+1. Register an OAuth app at `https://oauth.yandex.ru/` — choose **"For API access"**, add scopes
+   `cloud_api:disk.read` + `cloud_api:disk.write`, redirect URI `https://oauth.yandex.ru/verification_code`.
+2. Get a token in the browser (implicit flow):
+   `https://oauth.yandex.ru/authorize?response_type=token&client_id=<CLIENT_ID>` → copy `access_token` from the URL.
+3. **Encryptor** `config.json`:
+   ```json
+   { "backend": "yandex", "yandexToken": "<token>", "remoteBase": "second-brain",
+     "passphrase": "…", "sourceDir": "/path/to/vault", "statePath": "/path/to/state.json" }
+   ```
+   (env overrides: `BACKEND`, `YANDEX_TOKEN`, `REMOTE_BASE`.)
+4. **Plugin** settings: Backend → *Yandex.Disk*, paste the OAuth token, set *Remote base* to the Disk folder.
+
+Files live at `disk:/<remoteBase>/<name>`. Tokens last ~1 year; refresh by repeating step 2 (headless
+`--login` device-flow is planned). Note: Yandex REST does two requests per file (get presigned href, then transfer).
+
 ## Releasing (for BRAT)
 
 Tag a version matching `plugin/manifest.json` and push it; the
