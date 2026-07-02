@@ -26,6 +26,16 @@ describe("validateSettings", () => {
     expect(errs).toContain("WebDAV URL is required");
     expect(errs).toContain("Passphrase is required");
   });
+  it("yandex backend requires a token, not a URL", () => {
+    const errs = validateSettings({ ...ok, backend: "yandex", webdavUrl: "", yandexToken: "" });
+    expect(errs).toContain("Yandex.Disk token is required");
+    expect(errs).not.toContain("WebDAV URL is required");
+  });
+  it("yandex backend with token passes", () => {
+    expect(validateSettings({ ...ok, backend: "yandex", webdavUrl: "", yandexToken: "T" })).toEqual(
+      [],
+    );
+  });
 });
 
 describe("testConnection", () => {

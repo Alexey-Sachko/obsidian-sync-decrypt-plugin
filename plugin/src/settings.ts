@@ -3,7 +3,6 @@ import type WebDavDecryptSyncPlugin from "./main.js";
 import type { PluginSettings } from "./types.js";
 import { INTERVAL_PRESETS } from "./interval.js";
 import { validateSettings, testConnection } from "./validate.js";
-import { ObsidianWebDavClient } from "./webdav.js";
 
 export const DEFAULT_SETTINGS: PluginSettings = {
   webdavUrl: "",
@@ -15,6 +14,8 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   deleteMissing: true,
   syncInterval: 0,
   syncOnOpen: true,
+  backend: "webdav",
+  yandexToken: "",
 };
 
 const STRING_KEYS = [
@@ -24,6 +25,7 @@ const STRING_KEYS = [
   "passphrase",
   "remoteBase",
   "targetFolder",
+  "yandexToken",
 ] as const;
 type StringKey = (typeof STRING_KEYS)[number];
 
@@ -50,11 +52,37 @@ export class SyncSettingsTab extends PluginSettingTab {
         });
     };
 
-    textField("WebDAV URL", "Base URL of the WebDAV server", "webdavUrl");
-    textField("Username", "WebDAV user", "webdavUser");
-    textField("Password", "WebDAV password", "webdavPass", true);
+    new Setting(containerEl)
+      .setName("Backend")
+      .setDesc("WebDAV server or Yandex.Disk (REST API)")
+      .addDropdown((d) => {
+        d.addOption("webdav", "WebDAV");
+        d.addOption("yandex", "Yandex.Disk");
+        d.setValue(s.backend).onChange(async (v) => {
+          s.backend = v === "yandex" ? "yandex" : "webdav";
+          await this.plugin.saveSettings();
+          this.display(); // re-render to show relevant fields
+        });
+      });
+
+    if (s.backend === "webdav") {
+      textField("WebDAV URL", "Base URL of the WebDAV server", "webdavUrl");
+      textField("Username", "WebDAV user", "webdavUser");
+      textField("Password", "WebDAV password", "webdavPass", true);
+    } else {
+      textField(
+        "Yandex.Disk OAuth token",
+        "Access token with cloud_api:disk.read/write",
+        "yandexToken",
+        true,
+      );
+    }
     textField("Passphrase", "Decryption passphrase (same as the encryptor)", "passphrase", true);
-    textField("Remote base", "Subpath on the server (optional)", "remoteBase");
+    textField(
+      "Remote base",
+      s.backend === "yandex" ? "Folder on the Disk (e.g. second-brain)" : "Subpath on the server (optional)",
+      "remoteBase",
+    );
     textField("Target folder", "Vault folder to write into (default: root)", "targetFolder");
 
     new Setting(containerEl)
@@ -103,14 +131,7 @@ export class SyncSettingsTab extends PluginSettingTab {
             return;
           }
           status.setText("Testing…");
-          const dav = new ObsidianWebDavClient({
-            baseUrl: s.webdavUrl,
-            remoteBase: s.remoteBase,
-            user: s.webdavUser,
-            pass: s.webdavPass,
-            request: this.plugin.makeRequest(),
-          });
-          const res = await testConnection(dav);
+          const res = await testConnection(this.plugin.makeClient());
           status.setText(res.ok ? "✓ Connection OK" : "✗ " + res.message);
         }),
       );

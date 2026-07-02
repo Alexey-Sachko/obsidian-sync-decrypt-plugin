@@ -1,7 +1,8 @@
 import { Notice, Plugin, requestUrl } from "obsidian";
-import type { PersistedState, PluginSettings, RequestFn } from "./types.js";
+import type { PersistedState, PluginSettings, RequestFn, WebDavClient } from "./types.js";
 import { DEFAULT_SETTINGS, SyncSettingsTab } from "./settings.js";
 import { ObsidianWebDavClient } from "./webdav.js";
+import { YandexClient } from "./yandex.js";
 import { ObsidianVaultWriter } from "./vault-writer.js";
 import { PluginStateStore } from "./state-store.js";
 import { SyncEngine } from "./engine.js";
@@ -61,8 +62,25 @@ export default class WebDavDecryptSyncPlugin extends Plugin {
         headers: arg.headers,
         throw: false,
       });
-      return { status: res.status, arrayBuffer: res.arrayBuffer };
+      return { status: res.status, arrayBuffer: res.arrayBuffer, headers: res.headers };
     };
+  }
+
+  makeClient(): WebDavClient {
+    if (this.settings.backend === "yandex") {
+      return new YandexClient({
+        token: this.settings.yandexToken,
+        remoteBase: this.settings.remoteBase,
+        request: this.makeRequest(),
+      });
+    }
+    return new ObsidianWebDavClient({
+      baseUrl: this.settings.webdavUrl,
+      remoteBase: this.settings.remoteBase,
+      user: this.settings.webdavUser,
+      pass: this.settings.webdavPass,
+      request: this.makeRequest(),
+    });
   }
 
   applySchedule(): void {
@@ -77,13 +95,7 @@ export default class WebDavDecryptSyncPlugin extends Plugin {
     }
     this.syncing = true;
     try {
-      const webdav = new ObsidianWebDavClient({
-        baseUrl: this.settings.webdavUrl,
-        remoteBase: this.settings.remoteBase,
-        user: this.settings.webdavUser,
-        pass: this.settings.webdavPass,
-        request: this.makeRequest(),
-      });
+      const webdav = this.makeClient();
       const vault = new ObsidianVaultWriter(this.app.vault.adapter);
       const store = new PluginStateStore(this.state, async (st) => {
         this.state = st;
