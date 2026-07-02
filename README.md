@@ -23,6 +23,9 @@ Local end-to-end against a real WebDAV: `docker compose up -d` (see [docker-comp
 
 ## Encryptor (VPS)
 
+> Full operator reference (flags, config keys, env vars, paths, ignore rules, output/exit-code
+> contract) — for humans or an automated agent: **[encryptor/README.md](encryptor/README.md)**.
+
 1. `npm run build -w encryptor`, copy `encryptor/encryptor.mjs` to the server.
 2. Create `config.json`:
    ```json

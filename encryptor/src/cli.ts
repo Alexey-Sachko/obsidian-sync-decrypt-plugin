@@ -23,16 +23,25 @@ export function parseArgs(argv: string[]): CliArgs {
   return args;
 }
 
-const HELP = `encryptor — encrypt a vault and sync it to WebDAV
+const HELP = `encryptor — encrypt an Obsidian vault and sync it to a remote (WebDAV or Yandex.Disk)
 
 Usage: node encryptor.mjs [--config <path>] [--full] [--help]
 
-  --config <path>  Path to config.json (default: config.json)
-  --full           Re-encrypt and re-upload every file, ignoring state
+  --config <path>  Path to config.json (default: ./config.json, relative to CWD)
+  --full           Re-encrypt and re-upload every file, ignoring saved state
   --help, -h       Show this help
 
-Config keys (overridable via env WEBDAV_URL/WEBDAV_USER/WEBDAV_PASS/PASSPHRASE/SOURCE_DIR/STATE_PATH):
-  webdavUrl, webdavUser, webdavPass, passphrase, sourceDir, statePath, ignore[]
+Config (config.json; any key can be overridden by the env var in parentheses):
+  backend      "webdav" | "yandex"        (BACKEND)      default "webdav"
+  passphrase   decryption passphrase       (PASSPHRASE)   required
+  sourceDir    path to the plaintext vault (SOURCE_DIR)   required
+  statePath    path to state.json          (STATE_PATH)   required
+  ignore       array of names to skip (dirs/files, any depth)  default [".obsidian",".trash",".git"]
+  webdav ->    webdavUrl (WEBDAV_URL), webdavUser (WEBDAV_USER), webdavPass (WEBDAV_PASS)
+  yandex ->    yandexToken (YANDEX_TOKEN), remoteBase (REMOTE_BASE)
+
+Exit: 0 = ok, 1 = error (message on stderr). On success prints to stdout:
+  Synced: uploaded N, skipped M, deleted K
 `;
 
 async function readJsonIfPresent(path: string): Promise<Record<string, unknown> | undefined> {
