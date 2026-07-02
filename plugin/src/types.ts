@@ -10,6 +10,8 @@ export interface PluginSettings {
   deleteMissing: boolean;
   syncInterval: number; // minutes; 0 = off
   syncOnOpen: boolean;
+  backend: "webdav" | "yandex";
+  yandexToken: string;
 }
 
 export interface PersistedState {

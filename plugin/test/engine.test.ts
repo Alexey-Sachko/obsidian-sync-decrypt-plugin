@@ -102,6 +102,8 @@ const settings = (over: Partial<PluginSettings> = {}): PluginSettings => ({
   deleteMissing: true,
   syncInterval: 0,
   syncOnOpen: true,
+  backend: "webdav",
+  yandexToken: "",
   ...over,
 });
 

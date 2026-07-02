@@ -13,6 +13,8 @@ const ok: PluginSettings = {
   deleteMissing: true,
   syncInterval: 0,
   syncOnOpen: true,
+  backend: "webdav",
+  yandexToken: "",
 };
 
 describe("validateSettings", () => {
