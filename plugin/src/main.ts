@@ -71,6 +71,10 @@ export default class WebDavDecryptSyncPlugin extends Plugin {
 
   async syncNow(): Promise<void> {
     if (this.syncing) return;
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      this.status.setOffline();
+      return;
+    }
     this.syncing = true;
     try {
       const webdav = new ObsidianWebDavClient({
@@ -96,10 +100,18 @@ export default class WebDavDecryptSyncPlugin extends Plugin {
       this.status.setSyncing(0, 0);
       const stats = await engine.run();
       this.status.setSynced(this.state.lastSync ?? Date.now());
-      new Notice(`Synced ${stats.downloaded}, failed ${stats.failed}, deleted ${stats.deleted}`);
+      if (stats.notModified) {
+        new Notice("Already up to date");
+      } else {
+        new Notice(`Synced ${stats.downloaded}, failed ${stats.failed}, deleted ${stats.deleted}`);
+      }
     } catch (err) {
-      this.status.setFailed();
-      new Notice(`Sync failed: ${err instanceof Error ? err.message : String(err)}`);
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        this.status.setOffline();
+      } else {
+        this.status.setFailed();
+        new Notice(`Sync failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
     } finally {
       this.syncing = false;
     }
