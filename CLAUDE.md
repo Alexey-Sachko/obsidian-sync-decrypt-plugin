@@ -10,9 +10,10 @@
 
 **Сделано:**
 - **M0 · `crypto-core`** — готов. Пакет [crypto-core/](crypto-core/): `deriveKeys`, `deriveName`, `encryptBlob`/`decryptBlob`, `encryptManifest`/`decryptManifest`/`readManifestSalt`, `sha256Hex`, `base32NoPadEncode`. Только Web Crypto. 24 теста (round-trip, детерминизм, golden-вектора) + строгий typecheck зелёные. План: [docs/superpowers/plans/2026-07-01-m0-crypto-core.md](docs/superpowers/plans/2026-07-01-m0-crypto-core.md).
-- **M1 · `encryptor`** — готов. Пакет [encryptor/](encryptor/): слоистый CLI на портах `SourceFs`/`WebDav` ([sync.ts](encryptor/src/sync.ts) — ядро `encryptSync`: diff по sha, upload/delete, пересборка `manifest.enc`), Node-адаптеры [walk.ts](encryptor/src/walk.ts)/[webdav.ts](encryptor/src/webdav.ts) (встроенный `fetch`, Basic auth), state с base64-salt ([state.ts](encryptor/src/state.ts)), config file+env ([config.ts](encryptor/src/config.ts)), `--full`/`--config`/`--help` ([cli.ts](encryptor/src/cli.ts)). esbuild → единый `encryptor.mjs` (10 КБ, crypto-core инлайнится, ноль внешних зависимостей). 20 тестов + typecheck зелёные; sync-тест расшифровывает манифест через crypto-core (кросс-проверка формата). План: [docs/superpowers/plans/2026-07-02-m1-encryptor-cli.md](docs/superpowers/plans/2026-07-02-m1-encryptor-cli.md).
+- **M1 · `encryptor`** — готов. Пакет [encryptor/](encryptor/): слоистый CLI на портах `SourceFs`/`WebDav` ([sync.ts](encryptor/src/sync.ts) — ядро `encryptSync`: diff по sha, upload/delete, пересборка `manifest.enc`), Node-адаптеры [walk.ts](encryptor/src/walk.ts)/[webdav.ts](encryptor/src/webdav.ts) (встроенный `fetch`, Basic auth), state с base64-salt ([state.ts](encryptor/src/state.ts)), config file+env ([config.ts](encryptor/src/config.ts)), `--full`/`--config`/`--help` ([cli.ts](encryptor/src/cli.ts)). esbuild → единый `encryptor.mjs` (10 КБ, crypto-core инлайнится, ноль внешних зависимостей). 20 тестов + typecheck зелёные; sync-тест расшифровывает манифест через crypto-core (кросс-проверка формата). Проверен e2e против настоящего WebDAV ([docker-compose.yml](docker-compose.yml)). План: [docs/superpowers/plans/2026-07-02-m1-encryptor-cli.md](docs/superpowers/plans/2026-07-02-m1-encryptor-cli.md).
+- **M2 · `plugin`** (ядро синка) — готов. Пакет [plugin/](plugin/): ядро на портах `WebDavClient`/`VaultWriter`/`StateStore` ([engine.ts](plugin/src/engine.ts) — `SyncEngine.run`: скачать+расшифровать манифест → diff → per-file GET+decrypt+write, guard `isSyncing`, пофайловый try/catch, неверный passphrase → throw до записи), [diff.ts](plugin/src/diff.ts)/[paths.ts](plugin/src/paths.ts), Obsidian-адаптеры [webdav.ts](plugin/src/webdav.ts) (`requestUrl` инжектится, `btoa` для Basic), [vault-writer.ts](plugin/src/vault-writer.ts) (рекурсивный mkdir), [state-store.ts](plugin/src/state-store.ts), минимальный [settings.ts](plugin/src/settings.ts) + [main.ts](plugin/src/main.ts) (команда `Sync now`). `manifest.json` c `isDesktopOnly:false`. 22 теста (engine — на фейках портов + реальных зашифрованных фикстурах crypto-core) + typecheck зелёные; esbuild → `main.js` (obsidian external, crypto-core инлайнится). План: [docs/superpowers/plans/2026-07-02-m2-plugin.md](docs/superpowers/plans/2026-07-02-m2-plugin.md).
 
-**Дальше:** M2 (плагин: WebDavClient + расшифровка + запись) → M3 (Scheduler/Settings/StatusUI) → M4 (edge-cases + релиз BRAT).
+**Дальше:** M3 (Scheduler + полный SettingsTab + StatusUI: интервалы, sync-on-open, статус-бар) → M4 (edge-cases + релиз BRAT: `versions.json`, ручной e2e на iOS).
 
 ## Что это
 
@@ -68,8 +69,15 @@
 
 **Локальный e2e против настоящего WebDAV:** [docker-compose.yml](docker-compose.yml) поднимает `bytemark/webdav` на `http://localhost:8080` (testuser/testpass). `docker compose up -d` → собрать бандл → прогнать `node encryptor/encryptor.mjs --config <cfg>` на тестовом vault → скачать блобы/манифест по HTTP и расшифровать через crypto-core. Проверено сквозняком: initial (3 upload), инкремент (skip), правка+удаление (re-upload+DELETE, блоб отдаёт 404), `--full`, неверный passphrase (GCM-тег не сходится). `docker compose down -v` для очистки.
 
-### `/plugin` (ещё нет — ожидаемая форма)
-Стандартный esbuild-шаблон Obsidian для `/plugin` (выход: `main.js`, `manifest.json`, `styles.css`). Тесты `SyncEngine` (diff/ошибки/guard) — на моках `WebDavClient`/`VaultWriter`. Пропиши команды здесь, когда появятся.
+### `plugin` (M2 готов — ядро синка)
+`npm test -w plugin`, `npm run typecheck -w plugin`. Сборка: **`npm run build -w plugin`** → `plugin/main.js` (esbuild, `platform: browser`, `format: cjs`, `obsidian`/electron/node-builtins в external, crypto-core инлайнится; артефакт в `.gitignore`). Для загрузки в Obsidian нужны рядом `main.js` + `manifest.json` + `styles.css`.
+
+**Тестируемость через порты:** `SyncEngine` и хелперы (`computeDiff`, `joinVaultPath`) зависят только от портов (`WebDavClient`/`VaultWriter`/`StateStore`) и напрямую от crypto-core → юнит-тесты на фейках + **реальные зашифрованные фикстуры** (тест шифрует через crypto-core, движок расшифровывает — сквозная проверка формата). Obsidian-адаптеры тонкие: зависимость (`requestUrl`, `vault.adapter`) инжектится через **структурные** интерфейсы (`RequestFn`, `VaultAdapterLike`, type-only импорт из `obsidian`) — тестируются фейками, без рантайма Obsidian. Только `main.ts`/`settings.ts` трогают рантайм Obsidian и проверяются тайпчеком + сборкой, без юнит-тестов.
+
+**Не забывай (легко сломать iOS):** `manifest.json` → `"isDesktopOnly": false`; весь HTTP через `requestUrl()` (не `fetch`); в коде плагина никакого `node:*`/`Buffer` (WebView) — base64 через `btoa`, байты через `Bytes` из crypto-core; `lib: ES2022+DOM`, `types: []`.
+
+### `/plugin` UX (M3, ещё нет)
+Scheduler (`setInterval` + `sync-on-open` через `onLayoutReady`), полный SettingsTab (валидация, Test connection), StatusUI (status bar + ribbon spinner), опц. `If-None-Match` по ETag манифеста. Пропиши команды при появлении.
 
 ## Установка / релиз
 
