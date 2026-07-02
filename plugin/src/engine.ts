@@ -16,6 +16,7 @@ export interface SyncEngineDeps {
   vault: VaultWriter;
   state: StateStore;
   settings: PluginSettings;
+  onProgress?: (done: number, total: number) => void;
 }
 
 export class SyncEngine {
@@ -46,6 +47,8 @@ export class SyncEngine {
     const current = state.get();
     const { toDownload, toDelete } = computeDiff(manifest, current, settings.deleteMissing);
 
+    const total = toDownload.length;
+    let processed = 0;
     for (const file of toDownload) {
       try {
         const blob = await webdav.get(file.name);
@@ -57,6 +60,8 @@ export class SyncEngine {
         // Per-file failure: leave state untouched so the file retries next sync.
         stats.failed++;
       }
+      processed++;
+      this.deps.onProgress?.(processed, total);
     }
 
     for (const path of toDelete) {

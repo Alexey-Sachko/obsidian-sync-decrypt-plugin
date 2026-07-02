@@ -185,6 +185,23 @@ describe("SyncEngine.run", () => {
     expect(state.get().fileState["gone.md"]).toBeUndefined();
   });
 
+  it("reports progress after each download attempt", async () => {
+    const dav = new FakeDav(await buildRemote({ "a.md": "alpha", "b.md": "bravo" }));
+    const calls: Array<[number, number]> = [];
+    const engine = new SyncEngine({
+      webdav: dav,
+      vault: new FakeVault(),
+      state: new FakeState(emptyState()),
+      settings: settings(),
+      onProgress: (done, total) => calls.push([done, total]),
+    });
+    await engine.run();
+    expect(calls).toEqual([
+      [1, 2],
+      [2, 2],
+    ]);
+  });
+
   it("throws on wrong passphrase before writing anything", async () => {
     const dav = new FakeDav(await buildRemote({ "a.md": "alpha" }));
     const vault = new FakeVault();
