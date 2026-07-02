@@ -31,4 +31,7 @@ describe("statusText", () => {
   it("failed", () => {
     expect(statusText({ kind: "failed" }, now)).toBe("Sync failed");
   });
+  it("offline", () => {
+    expect(statusText({ kind: "offline" }, now)).toBe("Offline — will retry");
+  });
 });

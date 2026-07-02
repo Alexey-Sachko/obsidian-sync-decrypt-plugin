@@ -26,6 +26,11 @@ export class StatusUI {
     this.render();
   }
 
+  setOffline(): void {
+    this.phase = { kind: "offline" };
+    this.render();
+  }
+
   /** Refresh relative-time text without changing phase. */
   refresh(): void {
     this.render();

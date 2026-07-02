@@ -2,7 +2,8 @@ export type SyncPhase =
   | { kind: "idle" }
   | { kind: "syncing"; done: number; total: number }
   | { kind: "synced"; lastSync: number }
-  | { kind: "failed" };
+  | { kind: "failed" }
+  | { kind: "offline" };
 
 export function formatRelativeTime(then: number, now: number): string {
   const sec = Math.max(0, Math.floor((now - then) / 1000));
@@ -22,5 +23,7 @@ export function statusText(phase: SyncPhase, now: number): string {
       return `Synced ${formatRelativeTime(phase.lastSync, now)}`;
     case "failed":
       return "Sync failed";
+    case "offline":
+      return "Offline — will retry";
   }
 }
