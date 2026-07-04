@@ -16,6 +16,7 @@ export const DEFAULT_SETTINGS: PluginSettings = {
   syncOnOpen: true,
   backend: "webdav",
   yandexToken: "",
+  yandexApiBase: "https://cloud-api.yandex.net/v1/disk",
 };
 
 const STRING_KEYS = [
@@ -26,6 +27,7 @@ const STRING_KEYS = [
   "remoteBase",
   "targetFolder",
   "yandexToken",
+  "yandexApiBase",
 ] as const;
 type StringKey = (typeof STRING_KEYS)[number];
 
@@ -75,6 +77,11 @@ export class SyncSettingsTab extends PluginSettingTab {
         "Access token with cloud_api:disk.read/write",
         "yandexToken",
         true,
+      );
+      textField(
+        "Yandex.Disk API endpoint",
+        "REST base URL (default: https://cloud-api.yandex.net/v1/disk)",
+        "yandexApiBase",
       );
     }
     textField("Passphrase", "Decryption passphrase (same as the encryptor)", "passphrase", true);

@@ -29,6 +29,34 @@ describe("YandexClient.get", () => {
     expect(calls[0]!.headers!["Authorization"]).toBe("OAuth T");
     expect([...bytes]).toEqual([9, 8, 7]);
   });
+
+  it("uses a custom apiBase when provided (trailing slash trimmed)", async () => {
+    const { calls, request } = router((arg) => {
+      if (arg.url.includes("/resources/download"))
+        return { status: 200, arrayBuffer: enc({ href: "https://dl/x" }) };
+      return { status: 200, arrayBuffer: new Uint8Array([1]).buffer as ArrayBuffer };
+    });
+    const c = new YandexClient({
+      token: "T",
+      remoteBase: "",
+      request,
+      apiBase: "https://proxy.example/disk/",
+    });
+    await c.get("blob1");
+    expect(calls[0]!.url).toContain("https://proxy.example/disk/resources/download");
+    expect(calls[0]!.url).not.toContain("cloud-api.yandex.net");
+  });
+
+  it("falls back to the default endpoint when apiBase is empty", async () => {
+    const { calls, request } = router((arg) => {
+      if (arg.url.includes("/resources/download"))
+        return { status: 200, arrayBuffer: enc({ href: "https://dl/x" }) };
+      return { status: 200, arrayBuffer: new Uint8Array([1]).buffer as ArrayBuffer };
+    });
+    const c = new YandexClient({ token: "T", remoteBase: "", request, apiBase: "" });
+    await c.get("blob1");
+    expect(calls[0]!.url).toContain("https://cloud-api.yandex.net/v1/disk/resources/download");
+  });
 });
 
 describe("YandexClient.getConditional", () => {

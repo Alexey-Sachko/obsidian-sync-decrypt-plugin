@@ -115,6 +115,7 @@ Env-переменные для Яндекса: `BACKEND=yandex`, `YANDEX_TOKEN`
 | **Remote base** | папка на Диске — та же, что `remoteBase` у encryptor (напр. `second-brain`) |
 | **Passphrase** | **та же** пассфраза, что у encryptor |
 | **Target folder** | куда класть в vault (пусто = корень) |
+| **Yandex.Disk API endpoint** | по умолчанию `https://cloud-api.yandex.net/v1/disk`; меняй, только если ходишь через прокси/зеркало API |
 
 Затем:
 1. **Test connection** → должно быть `✓ Connection OK`.

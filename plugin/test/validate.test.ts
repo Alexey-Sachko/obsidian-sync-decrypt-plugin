@@ -15,6 +15,7 @@ const ok: PluginSettings = {
   syncOnOpen: true,
   backend: "webdav",
   yandexToken: "",
+  yandexApiBase: "https://cloud-api.yandex.net/v1/disk",
 };
 
 describe("validateSettings", () => {

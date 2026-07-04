@@ -12,6 +12,7 @@ export interface PluginSettings {
   syncOnOpen: boolean;
   backend: "webdav" | "yandex";
   yandexToken: string;
+  yandexApiBase: string;
 }
 
 export interface PersistedState {

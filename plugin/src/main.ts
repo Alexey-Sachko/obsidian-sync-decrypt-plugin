@@ -71,6 +71,7 @@ export default class WebDavDecryptSyncPlugin extends Plugin {
       return new YandexClient({
         token: this.settings.yandexToken,
         remoteBase: this.settings.remoteBase,
+        apiBase: this.settings.yandexApiBase,
         request: this.makeRequest(),
       });
     }
