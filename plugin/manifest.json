@@ -1,7 +1,7 @@
 {
   "id": "webdav-decrypt-sync",
   "name": "WebDAV Decrypt Sync",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "minAppVersion": "1.4.0",
   "description": "One-way sync of an encrypted vault from WebDAV, decrypted on-device.",
   "author": "Alexey Sachko",
